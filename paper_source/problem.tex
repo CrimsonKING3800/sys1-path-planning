@@ -1,0 +1,72 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Section 3: Problem Statement %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Preliminaries}
+\label{sec:Problem}
+This study addresses a UAV path-planning challenge inspired by real-world wildfire disaster response scenarios. The objective is to autonomously navigate a UAV through fire-affected forested regions to locate survivors while ensuring safe traversal by avoiding hazardous fire fronts. The UAV must reach a predefined goal region while dynamically adapting its trajectory to evolving environmental conditions.
+To support this task, we assume the presence of a disaster early-warning system (EWS) equipped with multimodal sensing capabilities, including satellite imagery and meteorological data. This system provides real-time updates on the locations of both fire fronts and survivors, enabling the UAV to maintain up-to-date situational awareness. Leveraging this information, the UAV must compute an optimal trajectory that balances mission success with environmental constraints, ensuring efficient and safe navigation through the disaster zone.
+
+\subsection{UAV Dynamical Model} 
+\label{ssec:agent_dynamics}
+Without loss of generality, we assume that the dynamical behavior $\mathscr{B}$ of a UAV agent can be described by a linear time-invariant (LTI) system \cite{how2015linear} of the following form:
+\begin{equation} \label{eq:LTI}
+\mathscr{B}(A,B,C,D) := 
+\begin{cases}
+x(t + 1) = Ax(t) + Bu(t) \\
+y(t) = Cx(t) + Du(t),
+\end{cases}
+\end{equation}
+where $\mathscr{B}(A,B,C,D)$ is the input/output/state representation of the system, with \( A \in \mathbb{R}^{n \times n} \), \( B \in \mathbb{R}^{n \times m} \), \( C \in \mathbb{R}^{p \times n} \), and \( D \in \mathbb{R}^{p \times m} \)  known. The state, control input, and output of the system at time-step \(t \in \mathbb{N}\) are given respectively by \( x(t) \in \mathcal{X} \subset \mathbb{R}^n \), \( u(t) \in \mathcal{U} \subset \mathbb{R}^m \),  and \( y(t) \in \mathcal{Y} \subset \mathbb{R}^p \). 
+For conciseness, we assume that \( x(t) \in \mathbb{R}^6 \) represents the 3D position and linear velocity of the UAV in Cartesian coordinates. The control input force is denoted by \( u(t) \in \mathbb{R}^3 \), and the UAV position by \( y(t) \in \mathbb{R}^3 \).
+
+\subsection{Environment Model} 
+\label{ssec:env_model}
+The UAV operates within a bounded three-dimensional environment $\mathcal{E} \subset \mathbb{R}^3$, which consists of (a) a designated goal region $\mathcal{G}$ that the UAV must reach during its mission and (b) a set of fire fronts $\mathcal{O}$ that must be avoided. The mission begins at the UAV's home depot $\mathcal{S}$, from which it departs at the start of the search and concludes upon reaching $\mathcal{G}$. All relevant environmental information, including the locations of $\mathcal{S}$, $\mathcal{G}$, and fire fronts $o \in \mathcal{O}$, is assumed to be fully known and provided to the UAV at the outset of the mission. In this formulation, $\mathcal{S}$, $\mathcal{G}$, and the set of fire fronts $\mathcal{O}$ are represented as rectangular cuboids of varying dimensions.
+
+\subsection{Problem Formulation} 
+\label{ssec:formulation}
+%The autonomous UAV navigation problem, as previously discussed, can be formulated as a finite-horizon optimal control problem, as presented in Eq.~\eqref{eq:MPC}. The objective is to determine the optimal UAV control inputs \( u(t) \), for \( t \in \{0, \dots, T-1\} \), over a suitably chosen planning horizon of length \( T \) time steps. These control inputs guide the UAV toward the goal region \( \mathcal{G} \) by tracking a reference path \( \mathcal{P} \) while adhering to the system's dynamics and constraints as shown.
+
+The autonomous UAV navigation problem, as previously discussed, can be formulated as a finite-horizon optimal control problem, as presented in Eq.~\eqref{eq:MPC}. The objective is to determine the optimal UAV control inputs \( u(t) \), for \( t \in \{0, \dots, T-1\} \), over a suitably chosen planning horizon of \( T \) time steps. These control inputs guide the UAV toward the goal region \( \mathcal{G} \) by tracking a reference path \( \mathcal{P} \) while adhering to the system's dynamics and constraints, as shown.
+
+
+
+\vspace{-2mm}
+\begin{equation}\label{eq:MPC}
+\begin{aligned}
+    \min_{u, y} \quad & \sum_{t=0}^{T-1} \left( \| y(t) - \mathcal{P}(t) \|_Q^2 + \| u(t) \|_R^2 \right) \\
+    \text{s.t.} \quad & x(t+1) = A x(t) + B u(t), \quad \forall t \in \{0, \dots, T-1\}, \\
+    & y(t) = C x(t) + D u(t), \quad \forall t \in \{0, \dots, T-1\}, \\
+    & x(0) = x_{init}, \\
+    & x(t) \in \mathcal{X}, \quad \forall t \in \{0, \dots, T-1\}, \\
+    & u(t) \in \mathcal{U}, \quad \forall t \in \{0, \dots, T-1\}, \\
+    & y(t) \in \mathcal{Y}, \quad \forall k \in \{0, \dots, N-1\}.
+\end{aligned}
+\end{equation}
+
+\noindent In the formulation above, \( x_{\text{init}} \) represents the agent's initial state, positioning the agent within its home depot \( \mathcal{S} \). The objective is to track the reference path \( \mathcal{P}(t) \), \( t \in \{0, \ldots, T-1\} \) (which describes a feasible path to the goal region), over the time horizon, subject to the UAV's dynamical constraints and operational behavior. The norm \( \|u(t)\|^2_R \) denotes the quadratic form \( u(t)^\top R u(t) \) (likewise for \( \|\cdot\|^2_Q \)), where \( R \in \mathbb{R}^{m \times m} \) is the control cost matrix and \( Q \in \mathbb{R}^{p \times p} \) is the output cost matrix. In essence, the objective function minimizes the weighted sum of the tracking error (i.e., deviation from the reference path) and control effort, with the weighting scheme captured in the matrices \( Q \) and \( R \), respectively. The reference path \( \mathcal{P} \) provides a collision-free path from \( \mathcal{S} \) to the goal region \( \mathcal{G} \). Once \( \mathcal{P} \) is known, the solution to the optimization problem in Eq.~\eqref{eq:MPC} can be obtained using numerical optimization, such as quadratic programming \cite{nocedal2006quadratic}. In the following section, we present how the proposed VLM-RRT approach generates the reference path \( \mathcal{P} \) by integrating a Large Language Model with the Rapidly-exploring Random Tree algorithm. To simplify the analysis without loss of generality, we assume that the UAV operates at a fixed altitude, thereby restricting our formulation to a planar 2D setting. However, the proposed approach can be readily extended to three-dimensional navigation.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Tradictional RRT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{algorithm}[ht]
+\caption{Traditional RRT Algorithm}
+\label{alg:traditional_rrt}
+\begin{algorithmic}[1]
+\Require $y(0), ~\mathcal{G}_o,~\mathcal{O}$, $\delta$
+\State $V \gets \{y(0)\}$, $E \gets \emptyset$, $r \gets \emptyset$, $i \gets 0$
+\While{$i < N$}
+    \State $\nu_{\text{rand}} \gets \text{SampleState()}$
+    \State $\nu_{\text{nearest}} \gets \text{NearestNeighbor}(V, \nu_{\text{rand}})$
+    \State $\nu_{\text{new}} \gets \text{Steer}(\nu_{\text{nearest}}, \nu_{\text{rand}}, \delta)$
+    \State $i \gets i + 1$
+	\If{$\text{PathFree}(\nu_{\text{new}},\nu_{\text{nearest}}, \mathcal{O})$}
+        \State $V \gets V \cup \{\nu_{\text{new}}\}$, $E \gets E \cup \{(\nu_{\text{nearest}}, \nu_{\text{new}})\}$
+    \EndIf
+    \If{$||\nu_{\text{new}} -  \mathcal{G}_o||_2 \leq \epsilon$}
+        \State $\mathcal{P} \gets \text{RetrievePlan}(V, E, \nu_{\text{new}})$
+        \State \Return $\mathcal{P}$
+    \EndIf
+\EndWhile
+\end{algorithmic}
+\end{algorithm}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Tradictional RRT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Section 3: Problem Statement %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
